@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.health.actuate.endpoint.CompositeHealthDescriptor;
 import org.springframework.boot.health.actuate.endpoint.HealthDescriptor;
@@ -12,6 +11,7 @@ import org.springframework.boot.health.actuate.endpoint.HealthEndpoint;
 import org.springframework.boot.health.contributor.Status;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestConstructor;
 
 @SpringBootTest(properties = {
     "INTERNAL_TOKEN=test-internal-token",
@@ -19,14 +19,18 @@ import org.springframework.test.context.ActiveProfiles;
     "CORS_ALLOWED_ORIGINS=https://qa.swapr.test"
 })
 @ActiveProfiles("qa")
+@TestConstructor(autowireMode = TestConstructor.AutowireMode.ALL)
 class FeedServiceApplicationTest {
 
-  @Autowired
-  private HealthEndpoint health;
+  private final HealthEndpoint healthEndpoint;
+
+  FeedServiceApplicationTest(HealthEndpoint healthEndpoint) {
+    this.healthEndpoint = healthEndpoint;
+  }
 
   @Test
   void reportsHealthyWithoutDatabaseComponent() {
-    HealthDescriptor result = health.health();
+    HealthDescriptor result = healthEndpoint.health();
 
     assertThat(result.getStatus()).isEqualTo(Status.UP);
     assertThat(((CompositeHealthDescriptor) result).getComponents()).doesNotContainKey("db");
@@ -34,7 +38,7 @@ class FeedServiceApplicationTest {
 
   @Test
   void reportsLive() {
-    HealthDescriptor liveness = health.healthForPath("liveness");
+    HealthDescriptor liveness = healthEndpoint.healthForPath("liveness");
 
     assertThat(liveness.getStatus()).isEqualTo(Status.UP);
   }
